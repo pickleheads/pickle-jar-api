@@ -1,10 +1,7 @@
 import * as express from 'express';
-import * as mongoose from 'mongoose';
-import { connect } from './db';
+import { connect } from '../db/connect';
+import { CustomRequest } from '../types/custom-request';
 
-export interface CustomRequest extends express.Request {
-  db?: mongoose.Mongoose;
-}
 export function cloudFunction(fn: Function) {
   return async (req: CustomRequest, res: express.Response) => {
     let dbConnection;

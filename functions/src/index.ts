@@ -1,16 +1,13 @@
 import * as express from 'express';
 import * as functions from 'firebase-functions';
-import { cloudFunction, CustomRequest } from './shared/cloud-function';
-import { ARCHIVED } from './shared/db';
+import { cloudFunction } from './shared/utils/cloud-function';
+import { getIdeaIdFromReq } from './shared/utils/req';
+import { CustomError } from './shared/types/custom-error';
+import { CustomRequest } from './shared/types/custom-request';
+import { ACTIVE, ARCHIVED } from './shared/db/schemas/idea';
 
-interface CustomError extends Error {
-  statusCode?: number;
-}
-
-const IDEA_ID_ERROR: CustomError = new Error('Missing required idea ID');
-IDEA_ID_ERROR.statusCode = 400;
 const METHOD_NOT_SUPPORTED_ERROR: CustomError = new Error(
-  'Method not supported'
+  'Method not supported',
 );
 METHOD_NOT_SUPPORTED_ERROR.statusCode = 405;
 
@@ -30,7 +27,7 @@ exports.addIdea = functions.https.onRequest(
       error.statusCode = 500;
       throw error;
     }
-  })
+  }),
 );
 
 exports.archiveIdea = functions.https.onRequest(
@@ -38,10 +35,7 @@ exports.archiveIdea = functions.https.onRequest(
     if (req.method !== 'PUT') {
       throw METHOD_NOT_SUPPORTED_ERROR;
     }
-    const ideaId = req.query.ideaId;
-    if (!ideaId) {
-      throw IDEA_ID_ERROR;
-    }
+    const ideaId = getIdeaIdFromReq(req);
     try {
       // @ts-ignore
       const updatedIdea = await req.db
@@ -54,7 +48,28 @@ exports.archiveIdea = functions.https.onRequest(
       error.statusCode = 500;
       throw error;
     }
-  })
+  }),
+);
+
+exports.unarchiveIdea = functions.https.onRequest(
+  cloudFunction(async (req: CustomRequest, res: express.Response) => {
+    if (req.method !== 'PUT') {
+      throw METHOD_NOT_SUPPORTED_ERROR;
+    }
+    const ideaId = getIdeaIdFromReq(req);
+    try {
+      // @ts-ignore
+      const updatedIdea = await req.db
+        .model('Idea')
+        .findOneAndUpdate({ _id: ideaId }, { status: ACTIVE }, { new: true });
+      res.status(200).send({ idea: updatedIdea });
+      // @ts-ignore
+      await req.db.close();
+    } catch (error) {
+      error.statusCode = 500;
+      throw error;
+    }
+  }),
 );
 
 exports.deleteIdea = functions.https.onRequest(
@@ -62,10 +77,7 @@ exports.deleteIdea = functions.https.onRequest(
     if (req.method !== 'DELETE') {
       throw METHOD_NOT_SUPPORTED_ERROR;
     }
-    const ideaId = req.query.ideaId;
-    if (!ideaId) {
-      throw IDEA_ID_ERROR;
-    }
+    const ideaId = getIdeaIdFromReq(req);
     try {
       // @ts-ignore
       const deletedIdea = await req.db.model('Idea').deleteOne({ _id: ideaId });
@@ -76,7 +88,7 @@ exports.deleteIdea = functions.https.onRequest(
       error.statusCode = 500;
       throw error;
     }
-  })
+  }),
 );
 
 exports.listIdeas = functions.https.onRequest(
@@ -102,5 +114,5 @@ exports.listIdeas = functions.https.onRequest(
       error.statusCode = 500;
       throw error;
     }
-  })
+  }),
 );

@@ -7,7 +7,7 @@ import { CustomRequest } from './shared/types/custom-request';
 import { ACTIVE, ARCHIVED } from './shared/db/schemas/idea';
 
 const METHOD_NOT_SUPPORTED_ERROR: CustomError = new Error(
-  'Method not supported',
+  'Method not supported'
 );
 METHOD_NOT_SUPPORTED_ERROR.statusCode = 405;
 
@@ -27,7 +27,7 @@ exports.addIdea = functions.https.onRequest(
       error.statusCode = 500;
       throw error;
     }
-  }),
+  })
 );
 
 exports.archiveIdea = functions.https.onRequest(
@@ -48,7 +48,7 @@ exports.archiveIdea = functions.https.onRequest(
       error.statusCode = 500;
       throw error;
     }
-  }),
+  })
 );
 
 exports.unarchiveIdea = functions.https.onRequest(
@@ -69,7 +69,7 @@ exports.unarchiveIdea = functions.https.onRequest(
       error.statusCode = 500;
       throw error;
     }
-  }),
+  })
 );
 
 exports.deleteIdea = functions.https.onRequest(
@@ -88,7 +88,7 @@ exports.deleteIdea = functions.https.onRequest(
       error.statusCode = 500;
       throw error;
     }
-  }),
+  })
 );
 
 exports.listIdeas = functions.https.onRequest(
@@ -99,20 +99,33 @@ exports.listIdeas = functions.https.onRequest(
     const query: any = {};
 
     const status = req.query.status;
-    if(status) {
+    if (status) {
       query.status = status;
     }
-
+    const skip = req.query.skip || 0;
     try {
       console.log({ query });
       // @ts-ignore
-      const ideas = await req.db.model('Idea').find(query);
-      res.status(200).send({ ideas });
+      const count = await req.db.model('Idea').count(query);
+      if (skip >= count) {
+        res
+          .status(400)
+          .send({ message: `Invalid skip number provided: ${skip}` });
+        return;
+      }
+      // @ts-ignore
+      const ideas = await req.db
+        .model('Idea')
+        .find(query)
+        .skip(skip)
+        .limit(10)
+        .exec();
+      res.status(200).send({ count, ideas });
       // @ts-ignore
       await req.db.close();
     } catch (error) {
       error.statusCode = 500;
       throw error;
     }
-  }),
+  })
 );

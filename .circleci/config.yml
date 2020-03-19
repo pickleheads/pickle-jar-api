@@ -2,7 +2,7 @@ version: 2
 jobs:
   deploy_functions:
     docker:
-    - image: circleci/node:7.10
+    - image: circleci/node:10.19.0
 
     working_directory: ~/repo
 

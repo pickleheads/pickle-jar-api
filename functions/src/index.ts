@@ -102,7 +102,7 @@ exports.listIdeas = functions.https.onRequest(
     if (status) {
       query.status = status;
     }
-    const skip = req.query.skip || 0;
+    const skip = req.query.skip && parseInt(req.query.skip) || 0;
     try {
       console.log({ query });
       // @ts-ignore
